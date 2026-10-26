@@ -218,3 +218,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project-specific: confidential input data
+/data/private/
+
+# Local environment variants, but allow a safe example template
+.env.*
+!.env.example
+
+# Operating system files
+.DS_Store
+Thumbs.db
