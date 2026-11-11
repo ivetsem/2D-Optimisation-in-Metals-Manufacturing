@@ -45,6 +45,14 @@ python scripts/rectpack_demo.py
 - `tests/`: validation tests
 - `results/`: selected outputs
 
+## Benchmark package
+
+Reusable dataset, solver, benchmark and analysis code lives in
+`src/cutting_benchmark/`.
+
+See [the package guide](docs/cutting_benchmark.md) for the workflow,
+data formats, assumptions and extension points.
+
 ## Data handling
 
 Do not commit client data, credentials or confidential project material.
