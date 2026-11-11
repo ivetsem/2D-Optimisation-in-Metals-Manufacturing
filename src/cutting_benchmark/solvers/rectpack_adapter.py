@@ -1,5 +1,8 @@
-import math
 import time
+
+from cutting_benchmark.rectangle_metrics import (
+    calculate_rectangle_metrics,
+)
 
 from rectpack import (
     newPacker,
@@ -40,7 +43,61 @@ def run_pack(
     available_sheets=None,
     return_layout=False,
 ):
-    """Run one RectPack configuration on rectangular parts."""
+    """Pack rectangular parts using one RectPack configuration.
+
+    Parameters
+    ----------
+    parts : iterable of tuple
+        Requested parts as (part_id, width, height).
+        Part IDs must be unique and dimensions must be positive.
+    algorithm : str
+        Packing algorithm name registered in ALGORITHMS.
+    sort : str
+        Sorting rule name registered in SORTS.
+    rotation : bool
+        Whether RectPack may rotate parts by 90 degrees.
+    sheet_size : tuple of int or float, optional
+        Identical sheet dimensions as (width, height).
+        Defaults to (2500, 1250).
+    available_sheets : int or None, optional
+        Positive number of available sheets. If None, allows one
+        sheet per requested part.
+    return_layout : bool, optional
+        Whether to include placements and used-sheet dimensions
+        in the returned dictionary. Defaults to False.
+
+    Returns
+    -------
+    dict
+        Solver and configuration identifiers, solver settings,
+        sheet dimensions, available stock, runtime and shared
+        rectangle-packing metrics.
+
+        If return_layout is True, also includes:
+        - placements: (bin_id, x, y, width, height, part_id) tuples.
+        - used_sheets: (width, height) tuples.
+
+    Raises
+    ------
+    ValueError
+        If parts is empty, dimensions are nonpositive, part IDs
+        are duplicated or available_sheets is less than one.
+    KeyError
+        If algorithm or sort is not registered.
+
+    Notes
+    -----
+    Uses offline packing with BBF bin selection.
+
+    Runtime includes packer construction, loading parts and sheets,
+    and packing. It excludes output extraction and metric calculation.
+
+    Parts that cannot be packed are reflected in the completion metrics;
+    an incomplete order does not itself raise an exception.
+
+    No kerf, inter-part clearance, material matching or sheet defects
+    are modelled by this adapter.
+    """
     parts = list(parts)
 
     if not parts:
@@ -64,24 +121,6 @@ def run_pack(
 
     if available_sheets < 1:
         raise ValueError("available_sheets must be positive")
-
-    def fits_sheet(w, h):
-        return (
-            (w <= sheet_w and h <= sheet_h)
-            or (
-                rotation
-                and h <= sheet_w
-                and w <= sheet_h
-            )
-        )
-
-    individually_feasible = all(
-        fits_sheet(w, h) for _, w, h in parts
-    )
-
-    total_area = sum(w * h for _, w, h in parts)
-    sheet_area = sheet_w * sheet_h
-    area_lower_bound = math.ceil(total_area / sheet_area)
 
     start = time.perf_counter()
 
@@ -109,12 +148,13 @@ def run_pack(
     placements = packer.rect_list()
     used_sheets = packer.bin_list()
 
-    packed_area = sum(
-        w * h for _, _, _, w, h, _ in placements
+    metrics = calculate_rectangle_metrics(
+        parts=parts,
+        placements=placements,
+        used_sheets=used_sheets,
+        sheet_size=sheet_size,
+        rotation=rotation,
     )
-    used_area = sum(w * h for w, h in used_sheets)
-
-    complete = len(placements) == len(parts)
 
     result = {
         "solver": "rectpack",
@@ -126,25 +166,8 @@ def run_pack(
         "sheet_width": sheet_w,
         "sheet_height": sheet_h,
         "available_sheets": available_sheets,
-        "parts_total": len(parts),
-        "parts_packed": len(placements),
-        "complete": complete,
-        "individually_feasible": individually_feasible,
-        "sheets_used": len(used_sheets),
-        "requested_area": total_area,
-        "packed_area": packed_area,
-        "part_fraction": len(placements) / len(parts),
-        "area_fraction": packed_area / total_area,
-        "utilisation": (
-            packed_area / used_area if used_area else 0.0
-        ),
-        "area_lower_bound": area_lower_bound,
-        "sheet_gap_to_area_bound": (
-            len(used_sheets) - area_lower_bound
-            if complete
-            else float("nan")
-        ),
         "runtime_seconds": runtime,
+        **metrics,
     }
 
     if return_layout:
