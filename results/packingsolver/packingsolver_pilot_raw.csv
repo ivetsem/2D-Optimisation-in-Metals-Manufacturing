@@ -1,0 +1,3 @@
+solver,config_id,objective,rotation,time_limit_seconds,sheet_width,sheet_height,available_sheets,runtime_seconds,layout_valid,parts_total,parts_packed,complete,individually_feasible,sheets_used,requested_area,packed_area,part_fraction,area_fraction,utilisation,area_lower_bound,sheet_gap_to_area_bound,dataset_id,seed,profile,n_parts,repeat
+packingsolver,BinPacking__time5s,BinPacking,True,5,2500,1250,35,5.030225595000047,True,35,35,True,True,5,12133094,12133094,1.0,1.0,0.776518016,4,1,rect_v1_mixed_sheet2500x1250_n35_seed0,0,mixed,35,0
+packingsolver,BinPacking__time5s,BinPacking,False,5,2500,1250,35,5.157743309000125,True,35,35,True,True,5,12133094,12133094,1.0,1.0,0.776518016,4,1,rect_v1_mixed_sheet2500x1250_n35_seed0,0,mixed,35,0
