@@ -35,6 +35,14 @@ def run_benchmark(
     pandas.DataFrame
         One row per dataset–configuration–repeat combination.
 
+        Each row includes `run_status`:
+        - `solution_returned`: the adapter returned a layout.
+        - `no_solution_returned`: the solver returned no populated
+          layout within its configured budget.
+
+        Rows with `no_solution_returned` do not provide packing
+        quality metrics and must not be interpreted as infeasible.
+
     Raises
     ------
     ValueError
@@ -57,15 +65,25 @@ def run_benchmark(
     records = []
 
     for dataset, configuration, repeat in jobs:
-        result = solver(
-            parts=dataset["parts"],
-            sheet_size=dataset["sheet_size"],
-            available_sheets=available_sheets,
-            **configuration,
-        )
+        try:
+            result = solver(
+                parts=dataset["parts"],
+                sheet_size=dataset["sheet_size"],
+                available_sheets=available_sheets,
+                **configuration,
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                "Benchmark run failed:\n"
+                f"dataset_id={dataset['dataset_id']}\n"
+                f"configuration={configuration}\n"
+                f"repeat={repeat}\n"
+                f"Original error: {exc}"
+            ) from exc
 
         records.append({
             **result,
+            "run_status": result.get("run_status", "solution_returned"),
             "dataset_id": dataset["dataset_id"],
             "seed": dataset["seed"],
             "profile": dataset["profile"],

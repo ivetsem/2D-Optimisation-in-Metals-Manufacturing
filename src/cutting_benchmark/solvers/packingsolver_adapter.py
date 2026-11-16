@@ -1,3 +1,4 @@
+import math
 import tempfile
 import time
 from pathlib import Path
@@ -166,10 +167,42 @@ def run_pack(
     item_rows = solution_df.loc[solution_df["TYPE"] == "ITEM"]
 
     if bin_rows.empty or item_rows.empty:
-        raise RuntimeError(
-            "PackingSolver exported no non-empty layout. "
-            "Inspect the solver output for the termination reason."
-        )
+        return {
+            "solver": "packingsolver",
+            "config_id": f"BinPacking__time{time_limit:g}s",
+            "objective": "BinPacking",
+            "rotation": rotation,
+            "time_limit_seconds": time_limit,
+            "sheet_width": sheet_w,
+            "sheet_height": sheet_h,
+            "available_sheets": available_sheets,
+            "runtime_seconds": runtime,
+            "run_status": "no_solution_returned",
+            "layout_valid": False,
+            "parts_total": len(parts),
+            "parts_packed": 0,
+            "complete": False,
+            "individually_feasible": all(
+                (w <= sheet_w and h <= sheet_h)
+                or (
+                    rotation
+                    and h <= sheet_w
+                    and w <= sheet_h
+                )
+                for _, w, h in parts
+            ),
+            "sheets_used": 0,
+            "requested_area": sum(w * h for _, w, h in parts),
+            "packed_area": 0.0,
+            "part_fraction": 0.0,
+            "area_fraction": 0.0,
+            "utilisation": 0.0,
+            "area_lower_bound": math.ceil(
+                sum(w * h for _, w, h in parts)
+                / (sheet_w * sheet_h)
+            ),
+            "sheet_gap_to_area_bound": float("nan"),
+        }
 
     if not bin_rows["COPIES"].eq(1).all():
         raise ValueError(
