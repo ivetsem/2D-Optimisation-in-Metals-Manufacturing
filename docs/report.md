@@ -1,234 +1,298 @@
-# Initial research: 2D optimisation for metals manufacturing
+# Rectangular packing for metals manufacturing: research and benchmark report
 
-**Project:** GoSmarter.ai — 2D Optimisation Challenge  
-**Date:** 17 November 2026  
-**Status:** Initial rectangle-packing investigation and proof-of-concept benchmark  
-**Evidence:** Synthetic datasets, implementation work and benchmark summaries supplied for this investigation.
+Date: 17 November 2026  
+Status: Portfolio research prototype and initial comparative evaluation
 
-## Executive findings
+## Executive summary
 
-Two open-source libraries, RectPack and PackingSolver, have been integrated into a reusable rectangle-packing benchmark. Both completed all tested datasets under the final benchmark settings. PackingSolver matched or improved upon every tested RectPack configuration on sheet count for each dataset and rotation setting. RectPack returned results in milliseconds, compared with seconds for PackingSolver.
+This project investigates existing open-source rectangular-packing tools and provides a reusable Python benchmark for comparing them. It was motivated by a research brief concerning the potential extension of GoSmarter.ai’s 1D cutting capabilities to 2D sheet and plate planning. This repository presents the author’s own implementation and analysis, not a delivered production system.
 
-The strongest **single fixed RectPack configuration by mean sheet count** was `MaxRectsBssf` with long-side sorting and BBF bin selection. Relative to that configuration, PackingSolver reduced total sheet use across the 30 datasets from 414 to 404 without rotation, and from 398 to 391 with rotation: approximately **2.4% and 1.8%**, respectively. These are benchmark-specific material-quantity reductions, not established customer cost savings.
+The main software contribution is a benchmark architecture that separates synthetic datasets, solver-specific adapters, shared metrics, validation and analysis. Rectpack and PackingSolver are currently integrated. The architecture is intended to accommodate further solvers without duplicating the complete experimental workflow.
 
-The recommended next step is not to develop a new geometric algorithm. Retain a fast RectPack baseline, investigate PackingSolver as a higher-quality optimisation option, and introduce representative manufacturing data and constraints incrementally. No production-readiness conclusion is justified yet.
+The recorded experiment covers 30 synthetic datasets, two rotation settings, 16 Rectpack configurations and one PackingSolver configuration with a 30-second time budget. All 1,020 recorded runs completed their orders. PackingSolver matched or improved on every tested Rectpack configuration on each matched dataset and rotation setting.
 
-## Scope and stopping point
+Against the strongest fixed Rectpack configuration by mean sheet count, `MaxRectsBssf / long_side / BBF`, PackingSolver reduced aggregate sheet use from 414 to 404 without rotation (2.42%) and from 398 to 391 with rotation (1.76%). These totals describe separate synthetic orders; they are not measured customer savings.
 
-The brief covers a much wider space than this initial implementation: rectangular and irregular nesting, cutting restrictions, material matching, traceability, remnants, scheduling, costs and scenarios.
+The trade-off was computation time. The fixed Rectpack baseline had median recorded runtimes of approximately 2.2 and 3.1 milliseconds without and with rotation, respectively. PackingSolver’s corresponding medians were 1.2 and 7.3 seconds. These are adapter timings, not complete application response times.
 
-Work completed here focuses on **rectangular parts packed onto identical rectangular sheets**, comparing material use and runtime under controlled conditions. It provides a working geometric proof of concept and an extensible evaluation framework, rather than a complete metals production-planning application.
+The practical recommendation is to retain a fast Rectpack baseline and evaluate PackingSolver as a higher-computation alternative where lower sheet consumption matters. Additional geometric algorithms are not the immediate priority. Representative data, consistent validation and explicit manufacturing constraints are the next evidence needed before considering a production application.
 
-| Area | Status at this stopping point |
+## 1. Scope and stopping point
+
+The original brief included rectangular and irregular nesting, cutting restrictions, material matching, traceability, remnants, scheduling and scenario planning. This phase deliberately addresses a smaller problem: placing rectangular parts on identical rectangular sheets and comparing completion, sheet consumption and runtime.
+
+| Area | Status |
 |---|---|
-| RectPack algorithms, sorting and rotation | Implemented and benchmarked |
-| PackingSolver rectangle integration | Implemented and benchmarked |
+| Synthetic datasets and JSON persistence | Implemented |
+| Rectpack algorithms, sorting and rotation experiments | Implemented and benchmarked |
+| PackingSolver rectangle adapter | Implemented and benchmarked |
 | Shared metrics and layout representation | Implemented |
-| Solver-independent geometric validator | Implemented and unit-tested; used in PackingSolver adapter |
-| Cross-tool comparison | Initial descriptive analysis completed |
-| Guillotine manufacturing feasibility | Not evaluated as a process-specific cutting model |
+| Shared geometric validator | Implemented, with unit tests; invoked by the PackingSolver adapter |
+| Cross-solver analysis | Implemented as exploratory notebook analysis; underlying CSV comparisons checked for this report |
+| Manufacturing-specific guillotine feasibility | Not evaluated |
 | Irregular nesting | Not experimentally evaluated |
-| Material matching, traceability and remnants | Requirements identified; not implemented |
-| Scheduling, costs and production sequencing | Not implemented |
-| Licensing and commercial SaaS review | Outstanding; no legal/commercial clearance claimed |
+| Material matching, certification and traceability | Not implemented |
+| Remnant inventory, scheduling and cost planning | Not implemented |
+| Commercial deployment and licensing review | Not completed |
 
-## Benchmark design
+The stopping point is a research prototype with recorded comparative evidence, not completion of the full production-planning brief.
 
-### Dataset matrix
+## 2. Software architecture
 
-The supplied tables cover 30 synthetic datasets, each tested with and without 90-degree rotation:
+Reusable code lives in `src/cutting_benchmark/`. Scripts and notebooks select experiments, manage files and present results.
 
-- Three profiles: `large_and_small`, `mixed` and `strips`.
-- Two order sizes: 35 and 100 requested parts.
-- Five seeds: 0–4.
-- Identical sheets with dimensions 2500 × 1250 in consistent input units.
-
-The dataset IDs establish the dimensions but not their physical unit. Interpret them as millimetres only after confirming that convention in the dataset documentation. Profile names describe the generator categories; precise dimension distributions should be taken from the generator rather than inferred from these names.
-
-### Tested methods
-
-RectPack used offline packing with BBF bin selection. The comparison covers four algorithms, four sorting rules and two rotation settings:
-
-| Setting | Values |
+| Component | Responsibility |
 |---|---|
-| Algorithms | `MaxRectsBssf`, `MaxRectsBaf`, `SkylineBl`, `GuillotineBafSas` |
-| Sorting | Input order, area, short side, long side |
-| Rotation | Prohibited / permitted |
-| PackingSolver objective | `BinPacking` |
-| PackingSolver budget | 30 seconds per final benchmark run |
+| `rectangle_datasets.py` | Reproducible generation and JSON save/load |
+| `solvers/rectpack_adapter.py` | Rectpack configuration and execution |
+| `solvers/packingsolver_adapter.py` | PackingSolver instance construction and certificate conversion |
+| `rectangle_validation.py` | Shared geometric and identity checks |
+| `rectangle_metrics.py` | Counts, areas, utilisation and area-bound metrics |
+| `benchmark.py` | Execution across datasets, configurations and repeats |
+| `summaries.py` | Guarded complete-order aggregation and best-observed comparisons |
 
-Each method–rotation combination has 30 result rows. The initial comparison uses one observation per dataset and configuration. It therefore measures observed outcomes, not runtime variability or statistical significance.
+Parts are represented as `(part_id, width, height)`. Placements use `(bin_id, x, y, width, height, part_id)`, where coordinates identify the bottom-left corner and dimensions describe the placed orientation. Original part identifiers are retained rather than inferred from dimensions, which may be duplicated across different parts.
 
-PackingSolver was installed as version `0.1.1340` under Python `3.14.2`. The RectPack version and hardware details should be recorded alongside the saved raw results before rerunning or publishing the benchmark externally.
+The benchmark runner accepts a solver callable and configuration dictionaries. This separates solver-specific integration from shared evaluation. It does not remove third-party dependencies or automatically establish that two solver configurations represent the same problem: objectives, stock, rotation and process restrictions must still be checked.
 
-### Implementation and validation
+## 3. Experimental design
 
-The `cutting_benchmark` package separates dataset generation, solver adapters, metrics, benchmarking and summaries. Both adapters produce placements as `(bin_id, x, y, width, height, part_id)` and retain original part identities.
+### 3.1 Dataset matrix
 
-The PackingSolver adapter builds one item type per requested part, applies explicit rotation rules, exports a temporary CSV certificate and converts that certificate into the shared representation. The current adapter requires integer dimensions and one physical sheet per certificate `BIN` row.
+The dataset-generation script defines 30 instances:
 
-The shared validator checks part identity, allowed dimensions and orientation, containment, overlap, sheet dimensions and stock limits. Touching edges and valid partial layouts are permitted. Tests deliberately include invalid layouts so that a passing test confirms rejection of the intended error.
+- Three profiles: `mixed`, `strips` and `large_and_small`.
+- Two order sizes: 35 and 100 parts.
+- Five random seeds: 0–4.
+- Identical sheets of 2500 × 1250 mm.
 
-**Validation caveat:** the supplied RectPack adapter calculates metrics but does not call the new validator. The shared validator is available for RectPack, but this report does not assume that all historic RectPack outputs have been revalidated. Count-based completion alone does not prove layout validity.
+Dimensions are integer millimetres. The generator uses a local seeded random-number generator; saved JSON instances allow solvers to use the same inputs.
 
-### Metrics and timing
+The profiles sample dimensions relative to sheet width and height:
 
-The primary metric is the number of sheets required to complete an order. Utilisation is packed area divided by total used-sheet area. For the **same complete order on identical sheets**, fewer sheets and higher utilisation are mathematically equivalent objectives. If two methods use the same sheet count on that order, their overall utilisation must also be the same, apart from numerical rounding.
+| Profile | Sampling ranges |
+|---|---|
+| `mixed` | Width and height each span 8–55% of the corresponding sheet dimension |
+| `strips` | Either width 45–95% and height 3–15%, or width 3–15% and height 45–95% |
+| `large_and_small` | Either width and height each 45–80%, or each 5–20% |
 
-Mean utilisation across datasets weights each dataset equally; it is not pooled material utilisation across the whole benchmark. Mean sheet count also mixes different order sizes, so profile- and workload-specific analysis remains important.
+For profiles with two alternatives, an alternative is selected independently for each part. Within the selected ranges, integer widths and heights are sampled independently. These distributions are synthetic scenarios, not validated manufacturing demand. Every generated part fits individually in its original orientation.
 
-The area lower bound is the ceiling of requested area divided by one sheet's area. It ignores geometric incompatibilities and is not generally a proof of optimality. However, a valid complete packing that attains that bound is optimal for sheet count.
+### 3.2 Solvers and configurations
 
-Both adapters' recorded `runtime_seconds` include construction/loading and packing or optimisation, but exclude output extraction and metric calculation. PackingSolver's CSV export and geometric validation are also outside its timed section. These figures are therefore **not full application end-to-end runtimes**. The 30-second setting is a solver budget, not a guaranteed wall-clock maximum.
+Rectpack uses offline packing with BBF bin selection. Its experiment combines:
 
-## Results by method
+- Algorithms: `MaxRectsBssf`, `MaxRectsBaf`, `SkylineBl`, `GuillotineBafSas`.
+- Sorting: input order, area, short side and long side.
+- Rotation: prohibited or permitted by 90 degrees.
 
-Every row in the supplied method summary reports 30 complete runs out of 30. The following table highlights PackingSolver, the strongest fixed RectPack configuration by mean sheet count, and a particularly fast competitive alternative.
+This gives 16 configurations per rotation setting and 960 runs overall.
 
-| Rotation | Method | Mean sheets | Median sheets | Best or tied / 30 | Mean time | Median time | Mean utilisation |
-|---|---|---:|---:|---:|---:|---:|---:|
-| No | PackingSolver, 30 s | 13.467 | 9.5 | 30 | 10.684 s | 1.208 s | 72.65% |
-| No | MaxRectsBssf, long side | 13.800 | 10.0 | 21 | 3.194 ms | 2.172 ms | 68.68% |
-| No | GuillotineBafSas, long side | 13.867 | 10.0 | 18 | 2.508 ms | 1.635 ms | 67.68% |
-| Yes | PackingSolver, 30 s | 13.033 | 9.0 | 30 | 11.508 s | 7.250 s | 73.97% |
-| Yes | MaxRectsBssf, long side | 13.267 | 9.5 | 23 | 3.799 ms | 3.075 ms | 71.34% |
-| Yes | GuillotineBafSas, long side | 13.400 | 9.5 | 19 | 2.906 ms | 2.366 ms | 70.58% |
+PackingSolver uses its `BinPacking` objective, one item type per requested part, explicit orientation settings and a configured time limit of 30 seconds. It contributes 60 runs overall. The adapter requires positive integer dimensions and currently supports one physical sheet per exported certificate `BIN` row.
 
-### Strongest fixed configuration
+The common baseline assumes compatible material, identical stock geometry and no kerf, clearance, defects or machine constraints. Algorithm names containing “Guillotine” do not establish that the complete experiment evaluates a particular manufacturing process or produces a verified machine cutting sequence.
 
-PackingSolver achieved the lowest mean sheet count and matched the observed minimum on every dataset in both rotation settings. This is **best observed among tested methods**, not a general proof that every returned solution is globally optimal.
+### 3.3 Environment and repetitions
 
-Within RectPack, `MaxRectsBssf / long_side / BBF` is the strongest fixed choice by mean sheet count and best-or-tied frequency. `GuillotineBafSas / long_side / BBF` is slightly faster but uses more sheets overall.
+The author reports development in GitHub Codespaces using Python 3.14.2, Rectpack 0.2.2 and PackingSolver 0.1.1340, installed in the project virtual environment.
 
-| Rotation | Fixed RectPack total | PackingSolver total | Sheets avoided | Reduction relative to RectPack |
+The recorded comparison contains one run per dataset and configuration. Although the runner supports repetitions, this experiment does not quantify runtime variability. Hardware specifications and a complete locked dependency environment have not been recorded in the evidence reviewed here. A fresh-environment execution has not been independently verified.
+
+The runner shuffles execution using an execution seed. This controls job order, not solver randomness.
+
+## 4. Metrics, validation and evidence checks
+
+### 4.1 Quality measures
+
+The primary comparison is sheet count for a complete order. Utilisation is packed area divided by total used-sheet area. For the same complete order on identical sheets, fewer sheets and higher overall utilisation are mathematically linked, not independent achievements.
+
+The area lower bound is requested area divided by sheet area, rounded upwards. It ignores geometric incompatibilities. A positive sheet-count gap to this bound is not a proven optimality gap. Conversely, a valid complete layout attaining the area bound establishes optimal sheet count for that instance.
+
+Best-observed comparisons refer only to the tested methods. Dataset means weight orders equally; they are not pooled utilisation or estimated customer savings.
+
+### 4.2 Completion versus geometric validity
+
+The metrics function determines completion by comparing placement count with requested count. Count equality alone does not establish correctness.
+
+The shared validator checks requested and placed identities, orientations, stock dimensions, containment, overlap and stock limits. Touching edges and valid partial layouts are permitted: validity and completion are separate properties.
+
+The PackingSolver adapter invokes this validator, and all 60 saved PackingSolver rows record `layout_valid=True`. The supplied Rectpack adapter does not invoke it. Therefore historic Rectpack results are complete by their recorded counts, but are not claimed here to have been independently revalidated with the shared validator. Layouts were not reconstructed from the summary CSVs during this report update.
+
+### 4.3 Timing definition
+
+Rectpack timings include packer construction, loading and packing. PackingSolver timings include instance construction and optimisation. Output extraction and shared metric calculation are excluded; PackingSolver certificate export, parsing and validation are also excluded.
+
+A configured solver budget is not a guaranteed end-to-end wall-clock maximum. Timings therefore support an observed computational trade-off, not a production latency guarantee.
+
+### 4.4 Checks on the saved results
+
+This report update checked the saved per-run results in
+`results/rectpack/rectpack_benchmark_raw.csv` and
+`results/packingsolver/packingsolver_benchmark_raw.csv`.
+The files contain 960 Rectpack records and 60 PackingSolver records.
+
+The checks established:
+
+- 960 Rectpack rows and 60 PackingSolver rows, all marked complete.
+- No duplicate run identifiers in either file.
+- Thirty datasets per Rectpack configuration and rotation setting, with matched PackingSolver coverage.
+- Agreement of paired metadata: seed, profile, requested part count, sheet dimensions, stock limit, requested area and total part count.
+- PackingSolver used no more sheets than Rectpack in all 960 matched configuration-level comparisons.
+
+These checks establish consistency of recorded results and metadata, not a fresh solver run or independent verification of all placements.
+
+## 5. Results
+
+### 5.1 Comparison with a fixed baseline
+
+`MaxRectsBssf / long_side / BBF` has the lowest aggregate sheet count among the tested fixed Rectpack configurations in both rotation settings. This baseline was selected after examining this benchmark; its ranking is descriptive and has not been validated on held-out workloads.
+
+| Rotation | Fixed Rectpack total | PackingSolver total | Sheets avoided | Reduction relative to Rectpack |
 |---|---:|---:|---:|---:|
-| No | 414 | 404 | 10 | 2.42% |
-| Yes | 398 | 391 | 7 | 1.76% |
+| Prohibited | 414 | 404 | 10 | 2.42% |
+| Permitted | 398 | 391 | 7 | 1.76% |
 
-Totals are reconstructed from 30 runs and the supplied rounded means. They should be confirmed directly from raw integer sheet counts when finalising the analysis.
+Totals are calculated directly from integer sheet counts over 30 independent orders. Orders were not pooled into a single joint packing problem.
 
-Sorting materially affects performance. For example, without rotation, `GuillotineBafSas` changes from 13.867 mean sheets with long-side sorting to 16.967 with short-side sorting. With rotation, those means are 13.400 and 16.200. Selecting a library alone is therefore insufficient: configuration matters.
-
-### Interpreting winner counts
-
-The per-dataset winner table was produced by sorting on sheet count and then runtime, before selecting one row per dataset and rotation setting. Its counts answer:
-
-> Which method had the lowest sheet count, breaking ties using the shortest measured runtime?
-
-They do **not** count all methods tying on material use.
-
-| Rotation | PackingSolver selected | RectPack selected | PackingSolver best or tied |
+| Rotation | PackingSolver uses fewer sheets | Same sheet count | PackingSolver uses more sheets |
 |---|---:|---:|---:|
-| No | 6 | 24 | 30 / 30 |
-| Yes | 4 | 26 | 30 / 30 |
+| Prohibited | 9 | 21 | 0 |
+| Permitted | 7 | 23 | 0 |
 
-This explains why `GuillotineBafSas / long_side` appears as the selected winner 14 times without rotation and 13 times with rotation, even though `MaxRectsBssf / long_side` has a better mean sheet count. Guillotine often wins the runtime tie-break on shared-quality solutions; it is not the strongest fixed configuration overall.
+The reduction is concentrated in a subset of orders, not uniformly distributed across every instance. Neither sheet-count reductions nor percentage differences establish monetary savings without stock prices, process costs and representative demand.
 
-The counts suggest that a portfolio of RectPack configurations can often match PackingSolver quickly, while PackingSolver adds material-use improvements on a subset of cases. A portfolio must be benchmarked as an actual strategy: hindsight selection of the best method per dataset is not a deployable algorithm, and its runtime must include every configuration tried.
+### 5.2 Runtime trade-off
 
-## Dataset-level observations
+| Rotation | Fixed Rectpack median runtime | PackingSolver median runtime |
+|---|---:|---:|
+| Prohibited | 2.172 ms | 1.208 s |
+| Permitted | 3.075 ms | 7.250 s |
 
-### Geometry changes the attainable utilisation
+Each median is calculated over 30 recorded runs. The contrast supports retaining a fast heuristic baseline while investigating whether additional computation is worthwhile for selected workloads. Single-run timing observations and incompletely documented hardware limit broader performance claims.
 
-The selected solutions for `large_and_small` datasets have utilisation of approximately 44–58%, whereas several `mixed` and `strips` solutions exceed 85–90%. Low utilisation alone does not establish poor optimisation: large incompatible dimensions can force substantial unused area even in a minimum-sheet packing.
+### 5.3 Best Rectpack result selected per dataset
 
-These differences support analysing results by profile and part count rather than relying only on an overall mean. They do not yet establish a causal explanation for each individual packing; visual inspection and lower bounds are needed for that.
+Selecting the best Rectpack sheet count retrospectively for each dataset gives the following comparison:
 
-### Illustrative results
+| Rotation | PackingSolver uses fewer sheets | Same sheet count | PackingSolver uses more sheets |
+|---|---:|---:|---:|
+| Prohibited | 6 | 24 | 0 |
+| Permitted | 4 | 26 | 0 |
 
-| Dataset suffix | Rotation | Selected result | Utilisation | Interpretation |
-|---|---|---:|---:|---|
-| `mixed_n100_seed1` | Yes | PackingSolver: 10 sheets | 97.15% | High-density result selected despite a 29.74 s runtime; inspect paired RectPack rows to quantify savings |
-| `mixed_n35_seed3` | Both | PackingSolver: 4 sheets | 92.73% | Selected in both rotation settings; result reaches the area lower bound |
-| `strips_n100_seed3` | No / Yes | PackingSolver: 8 / 7 sheets | 81.60% / 93.26% | Rotation reduces the best observed sheet count by one |
-| `large_and_small_n100_seed1` | No / Yes | RectPack: 39 / 38 sheets | 50.89% / 52.22% | Fast RectPack configurations attain the observed minimum |
+Thus some benefits remain even against the hindsight-best Rectpack result. However, retrospective selection is not an implemented portfolio strategy. A deployable portfolio must define which configurations run, when to stop and how to select a result; its timing must include all work performed.
 
-Dataset suffixes omit the common `rect_v1_` prefix and `sheet2500x1250` component.
+Notebook 04 also selects a single winner by sorting sheet count and then runtime. Those counts describe runtime-tiebroken selections, not all methods tying on material use. They should not replace explicit wins, ties and losses.
 
-For `mixed_n35_seed3`, four sheets at 92.73% utilisation imply requested area greater than three sheet areas. Consequently, fewer than four sheets are impossible, and this particular complete result is sheet-count optimal by the area bound. This reasoning does not imply optimality for all other benchmark rows.
+### 5.4 Configuration and rotation matter
 
-### Rotation benefits both approaches
+Configuration choice materially changes Rectpack performance. Without rotation, `GuillotineBafSas` uses 416 sheets in total with long-side sorting versus 509 with short-side sorting. With rotation, the corresponding totals are 402 and 486. These are benchmark-specific differences, not universal algorithm rankings.
 
-Allowing rotation reduced PackingSolver's aggregate sheet count from 404 to 391 across the 30 datasets, about 3.2%. The strongest fixed RectPack configuration improved from 414 to 398, about 3.9%.
+Allowing rotation reduces PackingSolver’s total from 404 to 391 sheets (3.22%) and the fixed Rectpack baseline from 414 to 398 (3.86%). Rotation must remain an explicit permission, not an assumed production capability.
 
-These benefits apply only where rotation is operationally permitted. A production system must respect any directional finish, grain, rolling-direction or part-specific restrictions instead of assuming unrestricted rotation.
+## 6. Unsuccessful searches and robustness
 
-## Runtime and unsuccessful searches
+The PackingSolver exploration records a diagnostic in which a short budget returned no populated solution and a longer run returned a complete layout. This motivates a distinction between unsuccessful search and proven infeasibility. It is not evidence that a particular larger budget always succeeds.
 
-A diagnostic on `large_and_small_n100_seed1` returned no populated solution with a five-second setting; reported elapsed time was approximately 9.17 seconds. A longer-budget run returned all 100 parts on 38 sheets after approximately 10.53 seconds and reported equal primal and dual bounds.
+The current adapter returns `run_status="no_solution_returned"` for an empty exported result. That branch also records zero-valued packing fields and `layout_valid=False`. These values must not be interpreted as a superior zero-sheet plan or proof of geometric invalidity: no populated layout was available to assess.
 
-This demonstrated the need to distinguish **no solution returned** from **proven infeasible**. Every part fitted individually with rotation, and stock allowed one sheet per part, so the instance was feasible irrespective of whether the short search returned a solution.
+Before experiments with unsuccessful runs are ranked, report completion and search status separately and exclude unavailable solutions from quality rankings. Use common eligible datasets or clearly report differing coverage. The current comparison notebook calculates some quality summaries before filtering completion; this needs hardening for future mixed-success experiments, but does not alter this all-complete result set.
 
-The adapter was updated to record an empty-result outcome rather than aborting the entire benchmark. Invalid layouts and unsupported certificate conversions remain errors. The final 30-second experiments all returned complete results.
+The summary utility deliberately rejects incomplete orders and repeats with varying quality. Such experiments need an explicit aggregation policy rather than silent averaging.
 
-**Reporting correction:** the current empty-result branch uses zero-valued quality fields and `layout_valid=False`. A missing layout is neither a valid zero-sheet solution nor necessarily an invalid geometric layout. Before analysing experiments containing such rows, exclude them from quality rankings and preferably change unavailable fields to missing values and use an explicit status. This issue does not change the current all-successful comparison.
+## 7. Implications and recommended technical direction
 
-## Implications for GoSmarter.ai
+### 7.1 Retain interchangeable geometric components
 
-### Recommended architecture
+The current evidence supports continuing with existing tools rather than developing a new packing algorithm. Keep datasets, validation, metrics and experiment provenance outside solver-specific code wherever practical.
 
-Use the solver as a replaceable geometric optimisation component behind a shared application-level contract. Keep inventory eligibility, traceability, job metadata, validation and reporting outside solver-specific code wherever practical.
+Two modes merit future evaluation:
 
-Two service levels are worth testing:
+- Fast baseline: a fixed Rectpack configuration or an explicitly benchmarked small portfolio.
+- Higher-computation search: a time-budgeted PackingSolver run where improved sheet consumption may justify waiting.
 
-- **Fast preview:** a selected RectPack configuration, or a measured small portfolio, for interactive planning.
-- **Improved plan:** a time-budgeted PackingSolver run where additional computation may reduce sheet consumption.
+This is a proposed strategy, not an implemented fallback, warm start or service architecture. Its value should be measured on representative workloads.
 
-This is a proposed architecture, not yet an implemented fallback or warm-start mechanism. Before adopting it, measure whether material improvements justify compute and waiting time on representative workloads.
+### 7.2 Separate geometry from production planning
 
-### Readiness assessment
+For the manufacturing questions motivating the original GoSmarter.ai brief, packing is only one component. A later application must determine eligible stock, preserve inventory and traceability identifiers, enforce process-specific restrictions and report unmet demand.
 
-| Component | Current assessment | Required next work |
+A small next proof of concept could:
+
+1. Obtain anonymised rectangular orders and stock with dimensions, quantities, material attributes and orientation permissions.
+2. Define eligibility and stock-availability rules explicitly.
+3. Preserve stock and part identities through solver conversion.
+4. Add agreed kerf, margins and spacing rules, without assuming those concepts are interchangeable.
+5. Compare the fixed baseline, a measured portfolio and PackingSolver under stated budgets.
+6. Record completion, stock consumption, runtime and remaining geometry before introducing cost or remnant-value objectives.
+
+Inventory eligibility rules can restrict which stock is considered; they do not automatically solve allocation across heterogeneous inventories. That would require additional modelling beyond the present identical-sheet adapters.
+
+### 7.3 Readiness assessment
+
+| Component | Assessment | Next evidence needed |
 |---|---|---|
-| RectPack adapter | Working research baseline | Revalidate historic layouts, pin dependencies, test representative production data |
-| PackingSolver adapter | Working research integration | Add bound/status metadata, robust unsuccessful-run records, certificate edge cases and performance evaluation |
-| Shared benchmark | Reusable experimental foundation | Record environment, verify paired coverage, add repetitions and durable progress saving |
-| Metals planning application | Significant application development required | Material eligibility, traceability, remnants, process feasibility, priorities and costs |
-| Irregular nesting and custom scheduling | Not evaluated in this phase | Separate tool assessment and representative proof of concept |
+| Rectpack adapter | Implemented research baseline | Shared validation, integration tests and representative workloads |
+| PackingSolver adapter | Implemented research integration | Robust status handling, certificate edge cases and deployment measurements |
+| Shared benchmark | Reusable experimental foundation | Fresh-environment verification, provenance and repeated timing |
+| Metals production application | Outside implemented scope | Eligibility, traceability, process feasibility, costs and scheduling |
+| Irregular nesting | Not evaluated | Separate tool assessment and representative experiments |
 
-Neither integration should be described as production-ready for metals manufacturing solely because it completed these synthetic instances. Licensing, dependency obligations, deployment behaviour and commercial SaaS suitability require a separate review.
+This report does not establish commercial SaaS suitability. Dependency licensing, deployment and operational obligations require a separate review. OR-Tools, SVGnest and libnest2d were candidates in the original brief, not experimentally evaluated alternatives in this phase.
 
-## Proposed manufacturing proof of concept
+## 8. Limitations
 
-Keep the next milestone small: rectangular orders assigned to compatible stock, followed by a validated nesting plan.
+- Synthetic inputs are not evidence of customer demand, material savings or cutting feasibility.
+- The strongest fixed baseline was identified on the same benchmark used to report its performance.
+- One observation per configuration does not quantify runtime or solution variability.
+- Recorded metadata agreement is not independent verification of underlying placements.
+- Historic Rectpack results have not been revalidated with the shared validator.
+- Lower-bound gaps generally do not prove optimality.
+- Adapter timings omit extraction and validation and were not obtained on a documented controlled production host.
+- A mixed family of packing heuristics does not constitute a process-specific guillotine-cutting evaluation.
+- Material matching, irregular nesting, remnants and scheduling remain unimplemented.
+- The complete installation workflow has not been independently reproduced in a fresh environment.
 
-1. Obtain an anonymised production sample with part dimensions, quantities, grade, thickness and permitted orientations.
-2. Model a limited sheet inventory with dimensions, availability, material attributes and traceability IDs.
-3. Enforce material and certification eligibility as hard constraints. Preserve the selected stock ID through every placement.
-4. Add process-specific edge margins, clearance and kerf rules; confirm their meaning with manufacturing stakeholders rather than treating all spacing as interchangeable.
-5. Compare the strongest fixed RectPack baseline, a measured RectPack portfolio and PackingSolver under explicit budgets.
-6. Record sheet use, actual stock cost, runtime, remaining material and unmet demand. Do not call all unused area reusable offcut: remnant geometry and handling rules matter.
+## 9. Prioritised next steps
 
-A later phase can introduce job priorities, due dates, machine capacity, sequencing and scenario planning. Irregular nesting and guillotine cutting should be evaluated as distinct problem variants, rather than assumed to follow automatically from unrestricted rectangle packing.
+### Publication and reproducibility
 
-## Limitations and next evidence
+1. Preserve the raw result files alongside the notebooks so the reported
+   comparisons can be reproduced.
+2. Record solver versions, the environment and the commands producing each result file.
+3. Verify local installation, tests and the supported notebook workflow in a clean environment.
+4. Correct historical notebook state and label exploratory sections explicitly.
+5. Apply shared validation to Rectpack outputs in future runs and add targeted adapter/runner tests.
+6. Harden comparison logic for unsuccessful runs and document any exclusions.
 
-- Synthetic profiles are not evidence of customer material savings or production feasibility.
-- One observation per configuration does not quantify runtime variability.
-- Different geometric algorithm families were compared for an unrestricted packing baseline; this is not a fair process-specific guillotine comparison.
-- The original RectPack results should be passed through the shared validator before stronger correctness claims.
-- Summary averages conceal dataset-level savings; retain paired raw rows and report wins, ties and losses explicitly.
-- Best-or-tied scores refer to the tested methods, not global optima.
-- Mean utilisation is an unweighted mean across orders, not pooled utilisation.
-- Runtime excludes extraction and validation and was not measured on a documented controlled production host.
-- Licensing, maintained-version assessment and SaaS deployment review remain incomplete.
-- OR-Tools, SVGnest and libnest2d were identified in the brief but were not experimentally evaluated in this phase.
+### Future research
 
-## Suggested meeting narrative
+1. Test on representative, non-confidential manufacturing workloads.
+2. Evaluate repeated runs and an explicit Rectpack portfolio.
+3. Add further solver adapters only where they answer a defined comparison question.
+4. Investigate process constraints and eligible-stock allocation before broader production planning.
+5. Treat irregular nesting, remnant management and scheduling as separate extensions.
 
-> We now have a working, reproducible rectangle-packing baseline with interchangeable solver adapters. PackingSolver produced the best observed material-use results on every test, allowing ties. Against the strongest single RectPack configuration, aggregate sheet use improved by approximately 2%. RectPack returned solutions in milliseconds and frequently matched that quality. The next decision is which production constraints and representative customer cases to add—not whether we need to invent a nesting algorithm from scratch.
+These extensions are recommendations, not prerequisites for recognising the present project as a completed initial investigation.
 
-## Evidence and repository map
+## 10. Evidence and repository map
 
-The empirical results in this report come from the supplied method summary, runtime-tiebroken per-dataset winner table and diagnostic solver output. No new benchmark was run to write this report.
+No new solver benchmark was run to write this update. Results were recomputed from the supplied per-run CSVs and interpreted against the implementation and notebooks.
 
-- Dataset generation: `src/cutting_benchmark/rectangle_datasets.py` and `scripts/generate_rectangle_datasets.py`.
-- Shared metrics: `src/cutting_benchmark/rectangle_metrics.py`.
-- Shared validation: `src/cutting_benchmark/rectangle_validation.py`.
-- Solver integrations: `src/cutting_benchmark/solvers/`.
-- Benchmark orchestration: `src/cutting_benchmark/benchmark.py`.
-- Experiments: `notebooks/`.
-- Saved evidence: `results/rectpack/` and `results/packingsolver/`.
-- Validator tests: `tests/test_rectangle_validation.py`.
+- Dataset generation: [`rectangle_datasets.py`](../src/cutting_benchmark/rectangle_datasets.py) and [generation script](../scripts/generate_rectangle_datasets.py).
+- Solver integrations: [`solvers/`](../src/cutting_benchmark/solvers/).
+- Shared metrics: [`rectangle_metrics.py`](../src/cutting_benchmark/rectangle_metrics.py).
+- Layout validation: [`rectangle_validation.py`](../src/cutting_benchmark/rectangle_validation.py).
+- Benchmark execution: [`benchmark.py`](../src/cutting_benchmark/benchmark.py).
+- Summary policy: [`summaries.py`](../src/cutting_benchmark/summaries.py).
+- Main Rectpack workflow: [`rectpack_demo.ipynb`](../notebooks/rectpack_demo.ipynb).
+- PackingSolver investigation: [`03_packingsolver_exploration.ipynb`](../notebooks/03_packingsolver_exploration.ipynb).
+- Cross-solver analysis: [`04_package_comparison.ipynb`](../notebooks/04_package_comparison.ipynb).
+- Saved experiment outputs: [`results/rectpack/`](../results/rectpack/) and [`results/packingsolver/`](../results/packingsolver/).
+- Tests: [`tests/`](../tests/).
 
-Before circulating externally, confirm physical units, dependency versions, hardware, repeat handling and full paired raw-data coverage. Retain the raw tables alongside this report so every aggregate can be reproduced.
+The numerical comparison uses:
+
+- `results/rectpack/rectpack_benchmark_raw.csv`
+- `results/packingsolver/packingsolver_benchmark_raw.csv`
+
+This report is intended to live at `docs/report.md`.
