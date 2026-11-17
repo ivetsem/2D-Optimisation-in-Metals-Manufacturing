@@ -1,0 +1,3 @@
+rotation,datasets,baseline_total_sheets,candidate_total_sheets,sheets_saved,candidate_wins,ties,candidate_losses,relative_reduction
+False,30,410,404,6,6,24,0,0.014634146341463415
+True,30,395,391,4,4,26,0,0.010126582278481013

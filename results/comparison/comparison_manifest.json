@@ -1,0 +1,42 @@
+{
+  "analysis_python": "3.14.2 (main, Sep 10 2026, 12:33:04) [GCC 13.3.0]",
+  "analysis_packages": {
+    "pandas": "3.1.0",
+    "rectpack": "0.2.2",
+    "packingsolver": "0.1.1340"
+  },
+  "git_commit": "dad42b4035d8acbfbcfb206f10a0acf721e12037",
+  "git_status": "M notebooks/04_package_comparison.ipynb\n M src/cutting_benchmark/summaries.py\n?? notebooks/demo_comparison.ipynb\n?? results/comparison/\n?? src/cutting_benchmark/comparison.py\n?? tests/test_comparison.py",
+  "fixed_baseline": {
+    "solver": "rectpack",
+    "config_id": "MaxRectsBssf__long_side__BBF"
+  },
+  "candidate": {
+    "solver": "packingsolver",
+    "config_id": "BinPacking__time30s"
+  },
+  "inputs": {
+    "rectpack": {
+      "path": "results/rectpack/rectpack_benchmark_raw.csv",
+      "sha256": "d8b46740ab4c36711ea4694c58ea1c53e436ce454e60fd543e846e774e44af5f",
+      "rows": 960
+    },
+    "packingsolver": {
+      "path": "results/packingsolver/packingsolver_benchmark_raw.csv",
+      "sha256": "c24981e80db84b6d75e8c0e0473ddeddbb5e5b1c8160da5dd67c0c87ea205f98",
+      "rows": 60
+    }
+  },
+  "outputs": [
+    "results/comparison/comparison_dataset_config.csv",
+    "results/comparison/comparison_completion_summary.csv",
+    "results/comparison/comparison_summary.csv",
+    "results/comparison/comparison_summary_by_workload.csv",
+    "results/comparison/comparison_summary_by_mean_sheets.csv",
+    "results/comparison/comparison_fixed_baseline_paired.csv",
+    "results/comparison/comparison_fixed_baseline_summary.csv",
+    "results/comparison/comparison_hindsight_rectpack_paired.csv",
+    "results/comparison/comparison_hindsight_rectpack_summary.csv",
+    "results/comparison/comparison_raw_completion.csv"
+  ]
+}

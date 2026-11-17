@@ -52,6 +52,9 @@ def summarise_results(results, config_columns=None):
     Every configuration matching the best observed count receives
     credit in the tied-best rate.
 
+    Totals and best-or-tied counts are calculated after repeat aggregation,
+    so repeated runs do not count as additional orders.
+
     Overall metrics weight each dataset equally after repeat aggregation.
     Median and P95 runtime are calculated across per-dataset median
     runtimes, not directly across all individual runs.
@@ -232,6 +235,9 @@ def summarise_results(results, config_columns=None):
             .agg(
                 datasets=("dataset_id", "nunique"),
                 mean_sheets=("sheets_used", "mean"),
+                total_sheets=("sheets_used", "sum"),
+                median_sheets=("sheets_used", "median"),
+                best_or_tied_datasets=("tied_best", "sum"),
                 mean_utilisation=("utilisation", "mean"),
                 mean_extra_sheets=(
                     "extra_sheets_vs_best", "mean"
