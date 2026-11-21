@@ -50,7 +50,7 @@ For PackingSolver experiments, also install:
 python -m pip install "packingsolver==0.1.1340"
 ```
 
-The reported development environment is Python 3.14.2 in GitHub Codespaces. These solver versions identify the benchmark environment, not a complete dependency lock. A fresh-environment reproduction has not been independently verified.
+The reported development environment is Python 3.14.2 in GitHub Codespaces. These solver versions identify the benchmark environment, not a complete dependency lock. In addition to the original Codespaces environment, the setup was recreated in a fresh Windows virtual environment using Python 3.14.6. All the tests and scripts were run successfully. This verifies the listed workflow on Windows; other platforms and untested workflows remain unverified.
 
 The current `pyproject.toml` declares pandas and Rectpack as runtime dependencies, pytest in the `dev` extra, and ipykernel and matplotlib in the `notebooks` extra. PackingSolver must currently be installed separately. Use the same environment for terminal execution and notebook kernels.
 

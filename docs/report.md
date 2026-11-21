@@ -104,6 +104,8 @@ The common baseline assumes compatible material, identical stock geometry and no
 
 The author reports development in GitHub Codespaces using Python 3.14.2, Rectpack 0.2.2 and PackingSolver 0.1.1340, installed in the project virtual environment.
 
+In addition to the original Codespaces environment, the setup was recreated in a fresh Windows virtual environment using Python 3.14.6. 
+
 The recorded comparison contains one run per dataset and configuration. Although the runner supports repetitions, this experiment does not quantify runtime variability. Hardware specifications and a complete locked dependency environment have not been recorded in the evidence reviewed here. A fresh-environment execution has not been independently verified.
 
 The runner shuffles execution using an execution seed. This controls job order, not solver randomness.
@@ -244,7 +246,7 @@ Inventory eligibility rules can restrict which stock is considered; they do not 
 |---|---|---|
 | Rectpack adapter | Implemented research baseline with shared validation and mocked tests | Representative workloads and external-solver integration testing |
 | PackingSolver adapter | Implemented research integration | Robust status handling, certificate edge cases and deployment measurements |
-| Shared benchmark | Reusable experimental foundation | Fresh-environment verification, provenance and repeated timing |
+| Shared benchmark | Reusable experimental foundation | Experiment provenance and repeated timing |
 | Metals production application | Outside implemented scope | Eligibility, traceability, process feasibility, costs and scheduling |
 | Irregular nesting | Not evaluated | Separate tool assessment and representative experiments |
 
@@ -256,12 +258,10 @@ This report does not establish commercial SaaS suitability. Dependency licensing
 - The strongest fixed baseline was identified on the same benchmark used to report its performance.
 - One observation per configuration does not quantify runtime or solution variability.
 - Recorded metadata agreement is not independent verification of underlying placements.
-- Older Rectpack results created before validator integration have not been revalidated.
 - Lower-bound gaps generally do not prove optimality.
 - Adapter timings omit extraction and validation and were not obtained on a documented controlled production host.
 - A mixed family of packing heuristics does not constitute a process-specific guillotine-cutting evaluation.
 - Material matching, irregular nesting, remnants and scheduling remain unimplemented.
-- The complete installation workflow has not been independently reproduced in a fresh environment.
 
 ## 9. Prioritised next steps
 

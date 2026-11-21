@@ -132,8 +132,9 @@ The project was developed in GitHub Codespaces using:
 - Rectpack 0.2.2
 - PackingSolver 0.1.1340
 
-Compatibility with other Python versions and platforms has not been
-verified. These solver versions identify the environment used for the
+In addition to the original Codespaces environment, the setup was recreated in a fresh Windows virtual environment using Python 3.14.6. All the tests and scripts were run successfully. This verifies the listed workflow on Windows; other platforms and untested workflows remain unverified.
+
+These solver versions identify the environment used for the
 reported results; the complete dependency environment is not currently
 locked in `pyproject.toml`.
 
