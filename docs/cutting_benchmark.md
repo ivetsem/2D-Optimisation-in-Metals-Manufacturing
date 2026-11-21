@@ -32,6 +32,7 @@ src/cutting_benchmark/
 | `solvers/rectpack_adapter.py` | Execute registered Rectpack configurations |
 | `solvers/packingsolver_adapter.py` | Build PackingSolver instances and convert exported certificates |
 | `benchmark.py` | Execute dataset–configuration–repeat combinations |
+| `comparison.py` | Validate comparison inputs and calculate paired sheet-count comparisons |
 | `summaries.py` | Aggregate complete-order results and calculate best-observed comparisons |
 
 ## Local setup
@@ -180,7 +181,7 @@ The adapter uses offline packing and BBF bin selection. `sheet_size` defaults to
 
 It rejects empty requests, duplicate part IDs, nonpositive dimensions and stock limits below one. Unregistered algorithm or sorting names raise `KeyError`. Parts not packed are reflected in completion metrics; incomplete orders do not automatically raise an exception.
 
-The current Rectpack adapter calculates shared metrics but does not invoke the shared layout validator. Validate returned layouts explicitly when independently checked correctness is required.
+The adapter passes extracted placements and used sheets through the shared validator before calculating metrics. Invalid geometry raises `ValueError`; a valid partial layout is returned with `layout_valid=True` and `complete=False`.
 
 ### PackingSolver
 
@@ -197,7 +198,7 @@ result = run_packingsolver(
 )
 ```
 
-The adapter uses `BinPacking`, one item type per requested part and explicit orientation permissions. The default time limit is 5 seconds; the reported cross-solver benchmark explicitly used 30 seconds. The default sheet size is `(2500, 1250)` and default stock is one sheet per part.
+The adapter uses `BinPacking`, one item type per requested part and explicit orientation permissions. A direct adapter call defaults to a 5-second solver limit; the command-line benchmark script defaults to 30 seconds, matching the current pilot configuration. The default sheet size is `(2500, 1250)` and default stock is one sheet per part.
 
 Input requirements include unique IDs, nonempty parts, positive integer-valued dimensions, a boolean rotation flag, a positive integer stock limit and a positive finite time limit. Dimensions accepted as integer-valued floats are converted to integers.
 
@@ -305,6 +306,48 @@ Rows contain the adapter’s fields plus `dataset_id`, `seed`, `profile`, `n_par
 
 A solver exception is wrapped in `RuntimeError` with dataset, configuration and repeat context, and stops execution. The runner does not save partial progress or catch errors as failed-run rows. Save outputs in the calling script or notebook.
 
+### Command-line benchmark and comparison scripts
+
+Run the pilot suite from the repository root:
+
+```bash
+python scripts/run_rectpack_benchmark.py
+python scripts/run_packingsolver_benchmark.py
+```
+
+The Rectpack script defaults to all four registered algorithms, all four
+sorting rules and both rotation settings: 32 configurations per dataset.
+The PackingSolver script defaults to both rotation settings with a
+30-second time limit. Both default to `data/synthetic/pilot_v1.json`,
+write per-run results to their respective `results/<solver>/` folders,
+and accept `--datasets`, `--output`, `--repeats` and
+`--available-sheets`. Rectpack also accepts algorithm/sort/rotation
+selection; both scripts accept a JSON configuration list with
+`--config-file`. Matching output files are overwritten, but other files
+already in the destination directory are left alone.
+
+Compare compatible result files with:
+
+```bash
+python scripts/compare_solver_benchmarks.py
+```
+
+Without `--results`, the comparison script discovers files matching
+`results/*/*_results.csv`. Pass explicit paths after `--results` to choose
+the input set. Each source file, solver and configuration is kept distinct.
+The completion report includes all runs. Quality summaries use only
+complete, layout-valid results on dataset/rotation pairs shared by every
+included setup. The script uses `validate_comparison_inputs`,
+`summarise_results` and `compare_sheet_counts`; its best-observed
+comparison is retrospective across the supplied methods, not a
+configuration selected in advance.
+
+The comparison output directory is `results/comparison/`. It contains a
+full completion report, per-dataset results, overall and workload
+summaries, and paired and aggregate comparisons against the best observed
+sheet count. See the comparison script's module docstring for the exact
+filenames and field meanings.
+
 ### Configuration identity
 
 Summary grouping defaults to `["solver", "config_id", "rotation"]`.
@@ -376,14 +419,15 @@ from pathlib import Path
 
 output_dir = Path("results/rectpack")
 output_dir.mkdir(parents=True, exist_ok=True)
-results.to_csv(output_dir / "rectpack_benchmark_raw.csv", index=False)
+results.to_csv(output_dir / "pilot_v1_results.csv", index=False)
 ```
 
 Repository locations include:
 
 - Inputs: `data/synthetic/pilot_v1.json`.
-- Rectpack per-run results: `results/rectpack/rectpack_benchmark_raw.csv`.
-- PackingSolver per-run results: `results/packingsolver/packingsolver_benchmark_raw.csv`.
+- Rectpack script output: `results/rectpack/pilot_v1_results.csv` by default.
+- PackingSolver script output: `results/packingsolver/pilot_v1_results.csv` by default.
+- Comparison script output: `results/comparison/`.
 - Exploratory and comparison workflows: `notebooks/`.
 
 Record the producing code revision, versions, settings and input identity with published experiments. CSV export overwrites an existing destination. Layout arrays are normally unnecessary in benchmark CSVs; request them separately for visualisation and validation.
@@ -409,8 +453,17 @@ Run from the repository root:
 python -m pytest
 ```
 
-The supplied tests cover dataset generation and persistence, metrics, validation cases and summary safeguards. They are not a full integration test of both solver adapters or every notebook.
+The supplied tests cover dataset generation and persistence, metrics,
+validation cases, summary safeguards, benchmark record construction,
+and mocked Rectpack and PackingSolver adapter result conversion. The
+adapter tests do not run the external solvers and are not end-to-end tests
+of the solver packages or notebooks. The PackingSolver adapter tests are
+skipped when its Python binding is not installed.
 
-Current limitations include validation asymmetry between adapters, limited certificate conversion, no automatic progress persistence, incomplete-result handling requiring care, and no manufacturing-specific feasibility model. The framework supports repeat execution, but the reported cross-solver comparison has one recorded run per dataset/configuration.
+Current limitations include limited certificate conversion, no automatic
+progress persistence, incomplete-result handling requiring care, and no
+manufacturing-specific feasibility model. The framework supports repeat
+execution, but the current pilot comparison uses one recorded run per
+dataset/configuration.
 
 The present package is an experimental foundation. Further solvers and manufacturing constraints are extension points, not existing capabilities.

@@ -37,11 +37,13 @@ reusable benchmarking infrastructure.
 - A benchmark runner covering datasets, configurations and repeated runs.
 - Shared metrics for completion, sheet count, utilisation and comparison
   with an area lower bound.
-- Geometric validation utilities for part identity, orientation,
-  containment, overlap and stock limits.
+- Shared geometric validation in both solver adapters, covering part
+  identity, orientation, containment, overlap and stock limits.
+- Command-line scripts to run each solver and compare compatible result
+  CSVs from multiple solvers and configurations.
 - Summary tables, visualisations and cross-solver analysis notebooks.
-- Tests for dataset generation, persistence, metrics, validation
-  and summary calculations.
+- Mocked tests for benchmark record construction and both adapter result
+  conversion paths, alongside dataset, metric, validation and summary tests.
 
 ### Not implemented
 
@@ -57,37 +59,36 @@ These are potential extensions rather than current capabilities.
 
 ## Benchmark findings
 
-The recorded benchmark covers 30 synthetic datasets, each evaluated
+The current pilot result files cover 30 synthetic datasets, each tested
 with and without 90-degree rotation:
 
 - Rectpack: 16 algorithm–sorting configurations per rotation setting,
   giving 960 recorded runs.
-- PackingSolver: one configuration with a 30-second time budget per
+- PackingSolver: one configuration with a 30-second time limit per
   rotation setting, giving 60 recorded runs.
 
-All recorded runs completed their requested orders. PackingSolver
-matched or improved on the sheet count of every tested Rectpack
-configuration for each dataset and rotation setting.
-
-The strongest fixed Rectpack configuration by mean sheet count was
-`MaxRectsBssf` with long-side sorting and BBF bin selection.
+All 960 Rectpack runs completed. PackingSolver completed all 30 runs
+without rotation and 29 of 30 with rotation. The remaining run returned
+no populated solution; the comparison therefore uses 30 shared datasets
+without rotation and 29 with rotation.
 
 | Rotation | Fixed Rectpack baseline: total sheets | PackingSolver: total sheets | Reduction relative to baseline |
 |---|---:|---:|---:|
-| Prohibited | 414 | 404 | 2.42% |
-| Permitted | 398 | 391 | 1.76% |
+| Prohibited | 414 | 402 | 2.90% |
+| Permitted | 387 | 377 | 2.58% |
 
-Each total sums sheet counts across 30 separate synthetic orders.
+The rotation-prohibited totals use 30 separate synthetic orders. The
+rotation-permitted totals use the 29 orders completed by every setup.
 
-PackingSolver used fewer sheets than this fixed baseline on 9 datasets
-without rotation and 7 with rotation, tying on the remaining datasets.
-It also improved on the best retrospectively selected Rectpack
-configuration on 6 and 4 datasets, respectively.
+The fixed Rectpack baseline was `MaxRectsBssf` with long-side sorting
+and BBF bin selection. PackingSolver used fewer sheets in aggregate in
+both settings, but this does not establish a globally optimal method or
+predict performance on manufacturing orders.
 
-The fixed Rectpack baseline had median recorded runtimes of approximately
-2.2 milliseconds without rotation and 3.1 milliseconds with rotation.
-PackingSolver's corresponding medians were approximately 1.2 seconds
-and 7.3 seconds.
+PackingSolver was substantially slower. Its median recorded runtime
+was about 0.74 seconds without rotation and 5.01 seconds with rotation;
+the fixed Rectpack baseline medians were about 2.1 and 1.4 milliseconds.
+PackingSolver's P95 runtime was about 30 seconds in both settings.
 
 These results describe the tested synthetic instances, not customer
 savings or production readiness. The benchmark uses one recorded run
@@ -96,11 +97,12 @@ variability.
 
 Recorded runtimes exclude output extraction and shared metric
 calculation. PackingSolver certificate export and geometric validation
-are also outside its timed section.
+are also outside its timed section. See [the research report](docs/report.md)
+for the methods and [the package guide](docs/cutting_benchmark.md) for
+the current command-line workflow and comparison rules.
 
-See [the research report](docs/report.md) and
-[the comparison notebook](notebooks/04_package_comparison.ipynb)
-for analysis and limitations.
+The pilot inputs are synthetic. These results are not customer savings,
+manufacturing feasibility or production-readiness evidence.
 
 ## Problem assumptions
 
@@ -150,9 +152,6 @@ On Windows PowerShell:
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 ```
-
-The Windows commands describe environment activation only; the project
-has not been verified on Windows.
 
 ### Install the local package
 
@@ -276,6 +275,51 @@ The profiles are synthetic test scenarios, not validated manufacturing
 demand distributions. Saved inputs allow different solvers to be
 evaluated on the same instances.
 
+### Run the command-line benchmarks
+
+From the repository root, run the default Rectpack suite:
+
+```bash
+python scripts/run_rectpack_benchmark.py
+```
+
+This runs 32 configurations per dataset (four algorithms, four sorting
+rules and two rotation settings) and writes
+`results/rectpack/pilot_v1_results.csv`. Select a smaller run with options
+such as `--algorithms MaxRectsBssf --sorts long_side`, or provide
+configurations in a JSON file with `--config-file`.
+
+Run PackingSolver with its default 30-second time limit and both rotation
+settings:
+
+```bash
+python scripts/run_packingsolver_benchmark.py
+```
+
+This writes `results/packingsolver/pilot_v1_results.csv`. Both benchmark
+scripts accept `--datasets` to use another dataset JSON, `--output` to
+choose the CSV path, `--repeats` to repeat runs, and `--available-sheets`
+to impose a stock limit. They report incomplete runs in the terminal;
+PackingSolver also reports runs where no solution was returned.
+
+### Compare benchmark result files
+
+```bash
+python scripts/compare_solver_benchmarks.py
+```
+
+By default, the comparison script discovers `*_results.csv` files under
+`results/<source>/`. To select inputs explicitly, pass paths after
+`--results`. It keeps each source and configuration distinct, reports
+completion for all runs, and compares solution quality only on complete,
+layout-valid datasets shared by all included setups. It writes summary,
+workload and per-dataset CSVs to `results/comparison/`. The best-observed
+comparison is retrospective across the supplied configurations, not a
+deployable solver-selection policy.
+
+The scripts overwrite their matching output CSVs. They do not remove
+unrelated or stale files already in the output directories.
+
 ### Run the package-based Rectpack benchmark
 
 Open:
@@ -316,10 +360,10 @@ sequential pipeline. Earlier exploration notebooks contain historical
 code, diagnostic cells and stored outputs; they are not all verified
 as clean top-to-bottom workflows.
 
-The comparison notebook reads saved benchmark CSVs. Check its input
-paths against the files being analysed, especially after renaming
-result files. Its current path setup assumes a working directory
-inside `notebooks/`.
+The comparison notebook is an earlier workflow and reads its own saved
+benchmark CSV paths. For current multi-file comparisons, use
+`scripts/compare_solver_benchmarks.py` or check the notebook's input
+paths against the files being analysed.
 
 ## Architecture
 
@@ -336,6 +380,7 @@ results.
 | `rectangle_metrics.py` | Calculate shared counts, areas and packing metrics |
 | `benchmark.py` | Execute datasets, configurations and repeats in shuffled order |
 | `summaries.py` | Aggregate complete-order results and compare configurations |
+| `comparison.py` | Validate comparison inputs and calculate paired sheet-count differences |
 
 The benchmark separates solver-specific integration from shared
 datasets, metrics and analysis. Adding a solver requires an adapter
@@ -369,12 +414,11 @@ Completion and layout validity are separate properties:
 - The shared validator checks part identities, dimensions, permitted
   orientations, containment, overlap, stock dimensions and stock limits.
 - Touching edges and valid partial layouts are allowed.
-- The PackingSolver adapter invokes the shared validator.
-- The Rectpack adapter currently calculates metrics without invoking it.
+- Both solver adapters validate populated layouts before returning metrics.
 
-The saved PackingSolver benchmark records successful layout validation.
-Historic Rectpack results should not be described as independently
-validated by the shared validator.
+Historical Rectpack CSVs created before validator integration do not gain
+validation retroactively; use new benchmark runs to record
+`layout_valid`.
 
 ### Bounds and unsuccessful searches
 
@@ -423,9 +467,12 @@ The supplied tests cover:
 - Area-bound interpretation.
 - Valid and deliberately invalid layout cases.
 - Summary calculations and comparison safeguards.
+- Benchmark record construction, status propagation and error context.
+- Mocked Rectpack and PackingSolver adapter conversion, validation and
+  unsuccessful-result behavior.
 
-They do not constitute a full end-to-end integration test of both
-solvers.
+The adapter tests use fake solver outputs; they do not constitute
+end-to-end tests of the external solver packages or every notebook.
 
 ## Repository structure
 
@@ -454,7 +501,10 @@ solvers.
 │   ├── packingsolver/
 │   └── rectpack/
 ├── scripts/
-│   └── generate_rectangle_datasets.py
+│   ├── generate_rectangle_datasets.py
+│   ├── run_rectpack_benchmark.py
+│   ├── run_packingsolver_benchmark.py
+│   └── compare_solver_benchmarks.py
 ├── src/
 │   └── cutting_benchmark/
 │       ├── __init__.py
@@ -468,6 +518,14 @@ solvers.
 │           ├── packingsolver_adapter.py
 │           └── rectpack_adapter.py
 └── tests/
+    ├── test_benchmark.py
+    ├── test_packingsolver_adapter.py
+    ├── test_rectpack_adapter.py
+    ├── test_comparison.py
+    ├── test_rectangle_datasets.py
+    ├── test_rectangle_metrics.py
+    ├── test_rectangle_validation.py
+    └── test_summaries.py
 ```
 
 Python caches and generated package metadata are omitted from this tree.
@@ -480,8 +538,9 @@ Python caches and generated package metadata are omitted from this tree.
   dataset formats and metrics.
 - [Research notes](docs/research-notes.md): brief exploratory observations.
 
-The separate tool-comparison document is currently an empty placeholder;
-the implemented comparison is presented in the report and notebook 04.
+The current reusable comparison workflow is
+`scripts/compare_solver_benchmarks.py`; the report summarizes the pilot
+results and notebook 04 preserves the earlier exploratory workflow.
 
 ## Limitations and future work
 
@@ -494,8 +553,8 @@ In particular:
 
 - Synthetic profiles are not validated demand distributions.
 - A single recorded run does not quantify runtime variability.
-- Historic Rectpack layouts have not been independently checked by the
-  shared validator.
+- Existing results produced before Rectpack validator integration have
+  not been independently revalidated.
 - Timings exclude parts of the end-to-end workflow.
 - Geometric packing does not establish a feasible machine cutting plan.
 - Results from different cutting constraints must not be treated as
@@ -505,8 +564,7 @@ Potential next steps include:
 
 - Verifying the complete workflow in a fresh environment and recording
   a reproducible dependency snapshot.
-- Applying shared validation consistently across adapters.
-- Adding adapter and benchmark-runner integration tests.
+- Repeating runs to quantify runtime and solution variability.
 - Strengthening unsuccessful-run handling and comparison safeguards.
 - Benchmarking a measured portfolio of fast configurations.
 - Evaluating additional solvers through the common interface.
