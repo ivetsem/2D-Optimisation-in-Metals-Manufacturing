@@ -56,6 +56,13 @@ Parts are represented as `(part_id, width, height)`. Placements use `(bin_id, x,
 
 The benchmark runner accepts a solver callable and configuration dictionaries. This separates solver-specific integration from shared evaluation. It does not remove third-party dependencies or automatically establish that two solver configurations represent the same problem: objectives, stock, rotation and process restrictions must still be checked.
 
+The repository includes a GitHub Actions workflow that runs the test suite
+on pushes and pull requests. It installs the project with its `dev` extra
+under Python 3.14 and runs `python -m pytest`. Adapter tests use fake solver
+outputs, so this automated check does not execute the external solvers,
+notebooks or full benchmarks. See the
+[workflow definition](../.github/workflows/tests.yml).
+
 ## 3. Experimental design
 
 ### 3.1 Dataset matrix

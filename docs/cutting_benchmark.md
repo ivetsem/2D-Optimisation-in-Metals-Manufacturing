@@ -460,6 +460,11 @@ adapter tests do not run the external solvers and are not end-to-end tests
 of the solver packages or notebooks. The PackingSolver adapter tests are
 skipped when its Python binding is not installed.
 
+GitHub Actions is configured to run `python -m pytest` on pushes and pull
+requests. It uses Python 3.14 and installs the project with the `dev` extra;
+it does not run notebooks or benchmark workloads. See the
+[test workflow](../.github/workflows/tests.yml).
+
 Current limitations include limited certificate conversion, no automatic
 progress persistence, incomplete-result handling requiring care, and no
 manufacturing-specific feasibility model. The framework supports repeat

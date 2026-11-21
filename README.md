@@ -474,6 +474,11 @@ The supplied tests cover:
 The adapter tests use fake solver outputs; they do not constitute
 end-to-end tests of the external solver packages or every notebook.
 
+GitHub Actions is configured to run this same test command on pushes and
+pull requests using Python 3.14. The workflow installs the project with
+its `dev` extra; it does not run notebooks or long benchmark jobs. See
+the [test workflow](.github/workflows/tests.yml).
+
 ## Repository structure
 
 ```text
