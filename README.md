@@ -259,7 +259,7 @@ python scripts/generate_rectangle_datasets.py
 This writes:
 
 ```text
-data/synthetic/pilot_v1.json
+data/synthetic/pilot_v1_generated.json
 ```
 
 The script generates 30 datasets from:
@@ -269,7 +269,7 @@ The script generates 30 datasets from:
 - Five random seeds: 0–4.
 - A default sheet size of 2500 × 1250 mm.
 
-Running the script again overwrites the destination file.
+If the output file already exists, the script stops without replacing it. Choose another path with --output, or pass --overwrite to replace the selected file.
 
 The profiles are synthetic test scenarios, not validated manufacturing
 demand distributions. Saved inputs allow different solvers to be
