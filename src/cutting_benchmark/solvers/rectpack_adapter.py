@@ -3,6 +3,9 @@ import time
 from cutting_benchmark.rectangle_metrics import (
     calculate_rectangle_metrics,
 )
+from cutting_benchmark.rectangle_validation import (
+    validate_rectangle_layout,
+)
 
 from rectpack import (
     newPacker,
@@ -70,8 +73,8 @@ def run_pack(
     -------
     dict
         Solver and configuration identifiers, solver settings,
-        sheet dimensions, available stock, runtime and shared
-        rectangle-packing metrics.
+        sheet dimensions, available stock, runtime, layout-validation
+        status and shared rectangle-packing metrics.
 
         If return_layout is True, also includes:
         - placements: (bin_id, x, y, width, height, part_id) tuples.
@@ -81,7 +84,8 @@ def run_pack(
     ------
     ValueError
         If parts is empty, dimensions are nonpositive, part IDs
-        are duplicated or available_sheets is less than one.
+        are duplicated, available_sheets is less than one, or the
+        extracted layout fails validation.
     KeyError
         If algorithm or sort is not registered.
 
@@ -148,6 +152,21 @@ def run_pack(
     placements = packer.rect_list()
     used_sheets = packer.bin_list()
 
+    validation = validate_rectangle_layout(
+        parts=parts,
+        placements=placements,
+        used_sheets=used_sheets,
+        sheet_size=sheet_size,
+        rotation=rotation,
+        available_sheets=available_sheets,
+    )
+
+    if not validation["layout_valid"]:
+        raise ValueError(
+            "Invalid Rectpack layout:\n"
+            + "\n".join(validation["validation_errors"])
+        )
+
     metrics = calculate_rectangle_metrics(
         parts=parts,
         placements=placements,
@@ -167,6 +186,7 @@ def run_pack(
         "sheet_height": sheet_h,
         "available_sheets": available_sheets,
         "runtime_seconds": runtime,
+        "layout_valid": True,
         **metrics,
     }
 
