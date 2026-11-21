@@ -585,3 +585,8 @@ Before publishing, confirm that no private inputs are already tracked:
 ```bash
 git ls-files -- data/private/
 ```
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE)
+for the full text.

@@ -66,7 +66,7 @@ From the repository root:
 python scripts/generate_rectangle_datasets.py
 ```
 
-This writes `data/synthetic/pilot_v1.json`, overwriting an existing file. The script generates 30 datasets: two order sizes (35 and 100), three profiles and five seeds (0–4), using 2500 × 1250 mm sheets.
+This writes `data/synthetic/pilot_v1_generated.json`, if the output file already exists, the script stops without replacing it. Choose another path with --output, or pass --overwrite to replace the selected file. The script generates 30 datasets: two order sizes (35 and 100), three profiles and five seeds (0–4), using 2500 × 1250 mm sheets.
 
 ### Generate an individual dataset
 

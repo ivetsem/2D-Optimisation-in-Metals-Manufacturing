@@ -1,3 +1,20 @@
+"""Generate the project's reproducible synthetic rectangle dataset suite.
+
+The default run creates 30 datasets from part counts of 35 and 100,
+three synthetic profiles, and seeds 0 through 4. Datasets use the
+generator's default 2500 by 1250 mm sheet size and are saved to
+``data/synthetic/pilot_v1_generated.json``.
+
+Use ``--output`` to choose another JSON path (relative paths are resolved
+from the repository root). If the destination already exists, generation
+stops unless ``--overwrite`` is supplied.
+
+Example::
+
+    python scripts/generate_rectangle_datasets.py --output data/synthetic/custom.json
+    python scripts/generate_rectangle_datasets.py --overwrite
+"""
+
 import argparse
 from itertools import product
 from pathlib import Path
