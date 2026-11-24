@@ -249,6 +249,27 @@ Each returned placement is represented as:
 The coordinates identify the bottom-left corner of the placed part.
 Width and height describe its placed orientation.
 
+### Plot a returned layout
+
+Any adapter result that includes the shared `placements` and `used_sheets`
+fields can be plotted. Request those fields with `return_layout=True`:
+
+```python
+from cutting_benchmark.rectangle_visualization import (
+    compare_rectangle_results,
+    plot_rectangle_result,
+)
+
+plot_rectangle_result(result)
+# With multiple results, for example from two adapter configurations:
+compare_rectangle_results([result_a, result_b], sheets=slice(0, 4))
+```
+
+Sheet selectors follow Python indexing (zero-based); plot labels start at
+Sheet 1. Comparison plots show each result's solver/configuration metadata,
+part IDs and per-sheet utilisation. If `sheets` is omitted, all sheets are
+shown; comparisons include sheets used by any result and mark unused panels.
+
 ### Generate synthetic datasets
 
 From the repository root:
@@ -355,6 +376,7 @@ outputs you want to retain before running experiments.
 | [`02_rectpack_summary.ipynb`](notebooks/02_rectpack_summary.ipynb) | Earlier self-contained benchmarking and summary exploration |
 | [`03_packingsolver_exploration.ipynb`](notebooks/03_packingsolver_exploration.ipynb) | PackingSolver integration, certificate conversion, validation and time-limit investigation |
 | [`04_package_comparison.ipynb`](notebooks/04_package_comparison.ipynb) | Dataset-level comparison of saved Rectpack and PackingSolver results |
+| [`05_visualization.ipynb`](notebooks/05_visualization.ipynb) | Selects a high-difference single dataset from comparison results, reruns layouts and plots the sheet-by-sheet comparison |
 
 The notebooks record the development process and are not a single
 sequential pipeline. Earlier exploration notebooks contain historical
@@ -379,6 +401,7 @@ results.
 | `solvers/packingsolver_adapter.py` | Build PackingSolver instances and convert solution certificates |
 | `rectangle_validation.py` | Validate shared rectangular layouts |
 | `rectangle_metrics.py` | Calculate shared counts, areas and packing metrics |
+| `rectangle_visualization.py` | Plot and compare adapter layouts using the shared rectangle format |
 | `benchmark.py` | Execute datasets, configurations and repeats in shuffled order |
 | `summaries.py` | Aggregate complete-order results and compare configurations |
 | `comparison.py` | Validate comparison inputs and calculate paired sheet-count differences |
