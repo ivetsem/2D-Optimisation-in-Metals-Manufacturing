@@ -101,6 +101,19 @@ are also outside its timed section. See [the research report](docs/report.md)
 for the methods and [the package guide](docs/cutting_benchmark.md) for
 the current command-line workflow and comparison rules.
 
+### Example layout comparison
+
+The figure below compares two complete layouts for the same 35-part
+synthetic order (`rect_v1_strips_sheet2500x1250_n35_seed3`) with rotation
+disabled. PackingSolver uses three sheets;
+the Rectpack `MaxRectsBssf / long_side / BBF` configuration uses four.
+Each panel shows the part IDs and that sheet's utilisation. The blank
+fourth panel in the first row keeps the sheet columns aligned.
+
+![Rectangle packing comparison for one 35-part synthetic order](docs/figures/packing_comparison.png)
+
+This is a single-instance illustration, not an aggregate benchmark result.
+
 The pilot inputs are synthetic. These results are not customer savings,
 manufacturing feasibility or production-readiness evidence.
 
@@ -517,6 +530,8 @@ the [test workflow](.github/workflows/tests.yml).
 │       └── pilot_v1.json
 ├── docs/
 │   ├── cutting_benchmark.md
+│   ├── figures/
+│   │   └── packing_comparison.png
 │   ├── report.md
 │   ├── research-notes.md
 │   └── tool-comparison.md

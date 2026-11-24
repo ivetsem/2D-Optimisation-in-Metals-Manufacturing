@@ -187,6 +187,15 @@ The rotation-prohibited totals use 30 independent orders. Rotation-permitted tot
 
 The reduction is concentrated in a subset of orders, not uniformly distributed across every instance. Neither sheet-count reductions nor percentage differences establish monetary savings without stock prices, process costs and representative demand.
 
+The figure below shows the complete layouts for one shared 35-part strip
+dataset (`rect_v1_strips_sheet2500x1250_n35_seed3`), with rotation disabled.
+PackingSolver places the order on three sheets; `MaxRectsBssf / long_side /
+BBF` uses four. The panels display part identities and per-sheet utilisation.
+This is an illustration of one instance, not a summary of the 30-order
+aggregate comparison.
+
+![PackingSolver and Rectpack layouts for one 35-part dataset](figures/packing_comparison.png)
+
 ### 5.2 Runtime trade-off
 
 | Rotation | Fixed Rectpack median runtime | PackingSolver median runtime |
