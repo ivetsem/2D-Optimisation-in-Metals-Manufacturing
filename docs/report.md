@@ -48,6 +48,7 @@ Reusable code lives in `src/cutting_benchmark/`. Scripts and notebooks select ex
 | `solvers/packingsolver_adapter.py` | PackingSolver instance construction and certificate conversion |
 | `rectangle_validation.py` | Shared geometric and identity checks |
 | `rectangle_metrics.py` | Counts, areas, utilisation and area-bound metrics |
+| `rectangle_visualization.py` | Solver-independent plots of layouts in the shared rectangle format |
 | `benchmark.py` | Execution across datasets, configurations and repeats |
 | `comparison.py` | Comparison-input checks and paired sheet-count differences |
 | `summaries.py` | Guarded complete-order aggregation and best-observed comparisons |
@@ -62,6 +63,18 @@ under Python 3.14 and runs `python -m pytest`. Adapter tests use fake solver
 outputs, so this automated check does not execute the external solvers,
 notebooks or full benchmarks. See the
 [workflow definition](../.github/workflows/tests.yml).
+
+The `rectangle_visualization.py` module provides single-layout plots and
+side-by-side comparisons from adapter results containing `placements` and
+`used_sheets`. It reads solver and configuration labels from result metadata,
+shows part identifiers and per-sheet utilisation, and uses Python-style
+zero-based sheet selectors while numbering plot labels from one. The
+`05_visualization.ipynb` workflow uses the saved comparison table to select a
+single strip-order dataset where two Rectpack configurations differ in sheet
+count, reruns those configurations with layout output enabled, and compares
+their sheet layouts alongside PackingSolver on the same parts and stock.
+This visual inspection is illustrative; the saved benchmark comparison
+remains the source for aggregate results.
 
 ## 3. Experimental design
 
@@ -173,6 +186,15 @@ The rotation-prohibited totals use 30 independent orders. Rotation-permitted tot
 | Permitted | 10 | 19 | 0 |
 
 The reduction is concentrated in a subset of orders, not uniformly distributed across every instance. Neither sheet-count reductions nor percentage differences establish monetary savings without stock prices, process costs and representative demand.
+
+The figure below shows the complete layouts for one shared 35-part strip
+dataset (`rect_v1_strips_sheet2500x1250_n35_seed3`), with rotation disabled.
+PackingSolver places the order on three sheets; `MaxRectsBssf / long_side /
+BBF` uses four. The panels display part identities and per-sheet utilisation.
+This is an illustration of one instance, not a summary of the 30-order
+aggregate comparison.
+
+![PackingSolver and Rectpack layouts for one 35-part dataset](figures/packing_comparison.png)
 
 ### 5.2 Runtime trade-off
 
@@ -302,6 +324,7 @@ limitations described above.
 - Main Rectpack workflow: [`rectpack_demo.ipynb`](../notebooks/rectpack_demo.ipynb).
 - PackingSolver investigation: [`03_packingsolver_exploration.ipynb`](../notebooks/03_packingsolver_exploration.ipynb).
 - Cross-solver analysis: [`04_package_comparison.ipynb`](../notebooks/04_package_comparison.ipynb).
+- Single-dataset layout comparison: [`05_visualization.ipynb`](../notebooks/05_visualization.ipynb).
 - Saved experiment outputs: [`results/rectpack/`](../results/rectpack/) and [`results/packingsolver/`](../results/packingsolver/).
 - Tests: [`tests/`](../tests/).
 

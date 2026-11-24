@@ -29,6 +29,7 @@ src/cutting_benchmark/
 | `rectangle_datasets.py` | Generate, save and load synthetic datasets |
 | `rectangle_metrics.py` | Calculate metrics from requested parts and returned layouts |
 | `rectangle_validation.py` | Check geometry, identities, orientations and stock limits |
+| `rectangle_visualization.py` | Plot and compare returned rectangular layouts |
 | `solvers/rectpack_adapter.py` | Execute registered Rectpack configurations |
 | `solvers/packingsolver_adapter.py` | Build PackingSolver instances and convert exported certificates |
 | `benchmark.py` | Execute dataset–configuration–repeat combinations |
@@ -142,6 +143,43 @@ Coordinates identify the bottom-left corner. Width and height describe the place
 Used sheets are a list of `(width, height)` records, one per physical used sheet. `bin_id` refers to the zero-based index in that list. Solver-specific sheet identifiers must be converted to this convention.
 
 Both adapters default to returning metrics without layouts. On populated results, set `return_layout=True` to include `placements` and `used_sheets`.
+
+## Rectangle layout visualisation
+
+`rectangle_visualization.py` consumes the shared result fields rather than
+solver-specific result types. Any adapter can use these functions if its
+result includes `placements` and `used_sheets` in the shared layout format.
+The optional `solver` and `config_id` fields provide descriptive plot labels;
+missing fields receive generic labels.
+
+```python
+from cutting_benchmark.rectangle_visualization import (
+    compare_rectangle_results,
+    plot_rectangle_result,
+)
+
+# `result` and `other_result` are populated adapter outputs.
+plot_rectangle_result(result)
+compare_rectangle_results([result, other_result], sheets=slice(0, 4))
+```
+
+Both functions return `(figure, axes)` and require Matplotlib, available in
+the `notebooks` optional dependency group. Pass `return_layout=True` to the
+adapter; results without layout fields raise `ValueError`.
+
+The `sheets` argument follows Python sequence selection: an integer selects
+one zero-based index, a slice selects a range, and an iterable selects
+specific indices. Negative indices are supported. For example, `range(4)`
+or `slice(0, 4)` selects the first four sheets. Display labels are one-based.
+With no selector, a single result displays all its sheets. A comparison
+displays every sheet used by any result and leaves marked empty panels where
+a particular result used fewer sheets.
+
+Plots read the solver and configuration labels from `solver` and
+`config_id`, draw part IDs by default, and report each sheet's utilisation
+(placed part area divided by that sheet's area). Use `show_ids=False` to
+hide part labels. The comparison function lays results out in rows and
+sheets in columns so configurations can be inspected on the same dataset.
 
 ## Solver adapters
 

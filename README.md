@@ -101,6 +101,19 @@ are also outside its timed section. See [the research report](docs/report.md)
 for the methods and [the package guide](docs/cutting_benchmark.md) for
 the current command-line workflow and comparison rules.
 
+### Example layout comparison
+
+The figure below compares two complete layouts for the same 35-part
+synthetic order (`rect_v1_strips_sheet2500x1250_n35_seed3`) with rotation
+disabled. PackingSolver uses three sheets;
+the Rectpack `MaxRectsBssf / long_side / BBF` configuration uses four.
+Each panel shows the part IDs and that sheet's utilisation. The blank
+fourth panel in the first row keeps the sheet columns aligned.
+
+![Rectangle packing comparison for one 35-part synthetic order](docs/figures/packing_comparison.png)
+
+This is a single-instance illustration, not an aggregate benchmark result.
+
 The pilot inputs are synthetic. These results are not customer savings,
 manufacturing feasibility or production-readiness evidence.
 
@@ -249,6 +262,27 @@ Each returned placement is represented as:
 The coordinates identify the bottom-left corner of the placed part.
 Width and height describe its placed orientation.
 
+### Plot a returned layout
+
+Any adapter result that includes the shared `placements` and `used_sheets`
+fields can be plotted. Request those fields with `return_layout=True`:
+
+```python
+from cutting_benchmark.rectangle_visualization import (
+    compare_rectangle_results,
+    plot_rectangle_result,
+)
+
+plot_rectangle_result(result)
+# With multiple results, for example from two adapter configurations:
+compare_rectangle_results([result_a, result_b], sheets=slice(0, 4))
+```
+
+Sheet selectors follow Python indexing (zero-based); plot labels start at
+Sheet 1. Comparison plots show each result's solver/configuration metadata,
+part IDs and per-sheet utilisation. If `sheets` is omitted, all sheets are
+shown; comparisons include sheets used by any result and mark unused panels.
+
 ### Generate synthetic datasets
 
 From the repository root:
@@ -355,6 +389,7 @@ outputs you want to retain before running experiments.
 | [`02_rectpack_summary.ipynb`](notebooks/02_rectpack_summary.ipynb) | Earlier self-contained benchmarking and summary exploration |
 | [`03_packingsolver_exploration.ipynb`](notebooks/03_packingsolver_exploration.ipynb) | PackingSolver integration, certificate conversion, validation and time-limit investigation |
 | [`04_package_comparison.ipynb`](notebooks/04_package_comparison.ipynb) | Dataset-level comparison of saved Rectpack and PackingSolver results |
+| [`05_visualization.ipynb`](notebooks/05_visualization.ipynb) | Selects a high-difference single dataset from comparison results, reruns layouts and plots the sheet-by-sheet comparison |
 
 The notebooks record the development process and are not a single
 sequential pipeline. Earlier exploration notebooks contain historical
@@ -379,6 +414,7 @@ results.
 | `solvers/packingsolver_adapter.py` | Build PackingSolver instances and convert solution certificates |
 | `rectangle_validation.py` | Validate shared rectangular layouts |
 | `rectangle_metrics.py` | Calculate shared counts, areas and packing metrics |
+| `rectangle_visualization.py` | Plot and compare adapter layouts using the shared rectangle format |
 | `benchmark.py` | Execute datasets, configurations and repeats in shuffled order |
 | `summaries.py` | Aggregate complete-order results and compare configurations |
 | `comparison.py` | Validate comparison inputs and calculate paired sheet-count differences |
@@ -494,6 +530,8 @@ the [test workflow](.github/workflows/tests.yml).
 │       └── pilot_v1.json
 ├── docs/
 │   ├── cutting_benchmark.md
+│   ├── figures/
+│   │   └── packing_comparison.png
 │   ├── report.md
 │   ├── research-notes.md
 │   └── tool-comparison.md
